@@ -1,6 +1,6 @@
 # This file is a part of Julia. License is MIT: https://julialang.org/license
 
-## SubString, RevString and Cstring tests ##
+## SubString and Cstring tests ##
 
 ## SubString tests ##
 u8str = "∀ ε > 0, ∃ δ > 0: |x-y| < δ ⇒ |f(x)-f(y)| < ε"
@@ -157,15 +157,6 @@ end
 
 ## Reverse strings ##
 
-rs = RevString("foobar")
-@test length(rs) == 6
-@test sizeof(rs) == 6
-@test isascii(rs)
-
-# issue #4586
-@test rsplit(RevString("ailuj"),'l') == ["ju","ia"]
-@test parse(Float64,RevString("64")) === 46.0
-
 # reverseind
 for T in (String, GenericString)
     for prefix in ("", "abcd", "\U0001d6a4\U0001d4c1", "\U0001d6a4\U0001d4c1c", " \U0001d6a4\U0001d4c1")
@@ -174,18 +165,23 @@ for T in (String, GenericString)
                 s = convert(T, string(prefix, c, suffix))
                 r = reverse(s)
                 ri = search(r, c)
-                @test r == RevString(s)
-                @test c == s[reverseind(s, ri)] == r[ri]
-                s = RevString(s)
-                r = reverse(s)
-                ri = search(r, c)
-                @test c == s[reverseind(s, ri)] == r[ri]
+                if T === String
+                    @test c == s[reverseind(s, ri)] == r[ri]
+                else
+                    # reverseind(s, ri) may not be the correct (or even a valid) index in s
+                    @test c == r[ri]
+                end
                 s = convert(T, string(prefix, prefix, c, suffix, suffix))
                 pre = convert(T, prefix)
                 sb = SubString(s, nextind(pre, endof(pre)), endof(convert(T, string(prefix, prefix, c, suffix))))
                 r = reverse(sb)
+                @test r isa String
                 ri = search(r, c)
-                @test c == sb[reverseind(sb, ri)] == r[ri]
+                if T === String
+                    @test c == sb[reverseind(sb, ri)] == r[ri]
+                else
+                    @test c == r[ri]
+                end
             end
         end
     end
