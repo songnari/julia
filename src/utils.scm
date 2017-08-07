@@ -84,3 +84,8 @@
                                           (without (cdr alst) remove)))))
 
 (define (caddddr x) (car (cdr (cdr (cdr (cdr x))))))
+
+(define (find p lst)
+  (cond ((atom? lst) #f)
+	((p (car lst)) lst)
+	(else (find p (cdr lst)))))

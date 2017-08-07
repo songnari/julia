@@ -708,7 +708,8 @@ function length(mt::MethodTable)
 end
 isempty(mt::MethodTable) = (mt.defs === nothing)
 
-uncompressed_ast(m::Method) = uncompressed_ast(m, isdefined(m, :source) ? m.source : m.generator.inferred)
+uncompressed_ast(m::Method) = isdefined(m,:source) ? uncompressed_ast(m, m.source) :
+                                                     uncompressed_ast(first(methods(m.generator)))
 uncompressed_ast(m::Method, s::CodeInfo) = s
 uncompressed_ast(m::Method, s::Array{UInt8,1}) = ccall(:jl_uncompress_ast, Any, (Any, Any), m, s)::CodeInfo
 uncompressed_ast(m::Core.MethodInstance) = uncompressed_ast(m.def)
