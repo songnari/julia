@@ -1967,7 +1967,7 @@ mktempdir() do dir
                 include($LIBGIT2_HELPER_PATH)
                 valid_cred = LibGit2.SSHCredentials($username, $passphrase, $valid_p_key, $(valid_p_key * ".pub"))
                 invalid_cred = LibGit2.SSHCredentials($username, "", $invalid_key, $(invalid_key * ".pub"))
-                payload = CredentialPayload(invalid_cred)
+                payload = CredentialPayload(invalid_cred, allow_prompt=false)
                 credential_loop(valid_cred, $url, $username, payload, use_ssh_agent=false)
             end
 
@@ -2002,7 +2002,7 @@ mktempdir() do dir
                 include($LIBGIT2_HELPER_PATH)
                 valid_cred = LibGit2.UserPasswordCredentials($valid_username, $valid_password)
                 invalid_cred = LibGit2.UserPasswordCredentials($invalid_username, $invalid_password)
-                payload = CredentialPayload(invalid_cred)
+                payload = CredentialPayload(invalid_cred, allow_prompt=false)
                 credential_loop(valid_cred, $url, "", payload)
             end
 
@@ -2047,7 +2047,7 @@ mktempdir() do dir
             replace_ex = quote
                 include($LIBGIT2_HELPER_PATH)
                 valid_cred = LibGit2.UserPasswordCredentials($valid_username, $valid_password)
-                invalid_cred = LibGit2.UserPasswordCredentials($invalid_username, $invalid_password, true)
+                invalid_cred = LibGit2.UserPasswordCredentials($invalid_username, $invalid_password)
                 cache = CachedCredentials()
                 LibGit2.get_creds!(cache, $cred_id, invalid_cred)
                 payload = CredentialPayload(cache)
