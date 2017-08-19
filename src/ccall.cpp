@@ -570,7 +570,8 @@ static Value *julia_to_address(
                     *needStackRestore = true;
                 }
                 ai->setAlignment(16);
-                ctx.builder.CreateMemCpy(ai, data_pointer(ctx, jvinfo, T_pint8), nbytes, sizeof(void*)); // minimum gc-alignment in julia is pointer size
+                // minimum gc-alignment in julia is pointer size
+                emit_memcpy(ctx, ai, jvinfo, nbytes, sizeof(void*));
                 return emit_bitcast(ctx, ai, to);
             }
         }
@@ -589,7 +590,7 @@ static Value *julia_to_address(
         Value *nbytes = emit_datatype_size(ctx, jvt);
         AllocaInst *ai = ctx.builder.CreateAlloca(T_int8, nbytes);
         ai->setAlignment(16);
-        ctx.builder.CreateMemCpy(ai, data_pointer(ctx, jvinfo, T_pint8), nbytes, sizeof(void*)); // minimum gc-alignment in julia is pointer size
+        emit_memcpy(ctx, ai, jvinfo, nbytes, sizeof(void*)); // minimum gc-alignment in julia is pointer size
         Value *p2 = emit_bitcast(ctx, ai, to);
         ctx.builder.CreateBr(afterBB);
         ctx.builder.SetInsertPoint(afterBB);
@@ -607,10 +608,7 @@ static Value *julia_to_address(
         ctx.builder.CreateStore(emit_unbox(ctx, slottype, jvinfo, ety), slot);
     }
     else {
-        ctx.builder.CreateMemCpy(slot,
-                             data_pointer(ctx, jvinfo, slot->getType()),
-                             (uint64_t)jl_datatype_size(ety),
-                             (uint64_t)jl_datatype_align(ety));
+        emit_memcpy(ctx, slot, jvinfo, jl_datatype_size(ety), jl_datatype_align(ety));
     }
     if (slot->getType() != to)
         slot = emit_bitcast(ctx, slot, to);
@@ -647,10 +645,7 @@ static Value *julia_to_native(
         ctx.builder.CreateStore(emit_unbox(ctx, to, jvinfo, jlto), slot);
     }
     else {
-        ctx.builder.CreateMemCpy(slot,
-                             data_pointer(ctx, jvinfo, slot->getType()),
-                             (uint64_t)jl_datatype_size(jlto),
-                             (uint64_t)jl_datatype_align(jlto));
+        emit_memcpy(ctx, slot, jvinfo, jl_datatype_size(jlto), jl_datatype_align(jlto));
     }
     return slot;
 }

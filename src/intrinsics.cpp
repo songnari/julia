@@ -345,7 +345,7 @@ static Value *emit_unbox(jl_codectx_t &ctx, Type *to, const jl_cgval_t &x, jl_va
         // x.tbaa ∪ tbaa_stack = tbaa_root if x.tbaa != tbaa_stack
         if (tbaa != tbaa_stack)
             tbaa = NULL;
-        ctx.builder.CreateMemCpy(dest, p, jl_datatype_size(jt), alignment, volatile_store, tbaa);
+        emit_memcpy(ctx, dest, p, jl_datatype_size(jt), alignment, volatile_store, tbaa);
         return NULL;
     }
     else {
@@ -598,7 +598,7 @@ static jl_cgval_t emit_pointerref(jl_codectx_t &ctx, jl_cgval_t *argv)
                     LLT_ALIGN(size, jl_datatype_align(ety))));
         Value *thePtr = emit_unbox(ctx, T_pint8, e, e.typ);
         thePtr = ctx.builder.CreateGEP(emit_bitcast(ctx, thePtr, T_pint8), im1);
-        ctx.builder.CreateMemCpy(emit_bitcast(ctx, strct, T_pint8), thePtr, size, 1);
+        emit_memcpy(ctx, strct, thePtr, size, 1);
         return mark_julia_type(ctx, strct, true, ety);
     }
 
@@ -653,8 +653,7 @@ static jl_cgval_t emit_pointerset(jl_codectx_t &ctx, jl_cgval_t *argv)
         uint64_t size = jl_datatype_size(ety);
         im1 = ctx.builder.CreateMul(im1, ConstantInt::get(T_size,
                     LLT_ALIGN(size, jl_datatype_align(ety))));
-        ctx.builder.CreateMemCpy(ctx.builder.CreateGEP(thePtr, im1),
-                             data_pointer(ctx, x, T_pint8), size, align_nb);
+        emit_memcpy(ctx, ctx.builder.CreateGEP(thePtr, im1), x, size, align_nb);
     }
     else {
         bool isboxed;
