@@ -2017,7 +2017,7 @@ mktempdir() do dir
                 include($LIBGIT2_HELPER_PATH)
                 valid_cred = LibGit2.UserPasswordCredentials($valid_username, $valid_password)
                 cache = CachedCredentials()
-                LibGit2.get_creds!(cache, $cred_id, valid_cred)
+                LibGit2.approve(cache, valid_cred, $url)
                 payload = CredentialPayload(cache)
                 credential_loop(valid_cred, $url, "", payload)
             end
@@ -2036,7 +2036,7 @@ mktempdir() do dir
                 valid_cred = LibGit2.UserPasswordCredentials($valid_username, $valid_password)
                 invalid_cred = LibGit2.UserPasswordCredentials($invalid_username, $invalid_password, true)
                 cache = CachedCredentials()
-                LibGit2.get_creds!(cache, $cred_id, invalid_cred)
+                LibGit2.approve(cache, invalid_cred, $url)
                 payload = CredentialPayload(cache)
                 err, auth_attempts = credential_loop(valid_cred, $url, "", payload)
                 (err, auth_attempts, cache)

@@ -1119,9 +1119,6 @@ struct CachedCredentials <: AbstractCredentials
     CachedCredentials() = new(Dict{String,AbstractCredentials}())
 end
 
-"Obtain the cached credentials for the given host+protocol (credid), or return and store the default if not found"
-get_creds!(collection::CachedCredentials, credid, default) = get!(collection.cred, credid, default)
-
 get(cache::CachedCredentials, credid, default) = Base.get(cache.cred, credid, default)
 
 function securezero!(p::CachedCredentials)
