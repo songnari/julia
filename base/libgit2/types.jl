@@ -1119,7 +1119,8 @@ struct CachedCredentials <: AbstractCredentials
     CachedCredentials() = new(Dict{String,AbstractCredentials}())
 end
 
-get(cache::CachedCredentials, credid, default) = Base.get(cache.cred, credid, default)
+Base.haskey(cache::CachedCredentials, cred_id) = Base.haskey(cache.cred, cred_id)
+Base.getindex(cache::CachedCredentials, cred_id) = Base.getindex(cache.cred, cred_id)
 
 function securezero!(p::CachedCredentials)
     foreach(securezero!, values(p.cred))
