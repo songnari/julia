@@ -1156,6 +1156,7 @@ mutable struct CredentialPayload <: Payload
     credential::Nullable{AbstractCredentials}
     first_pass::Bool
     use_ssh_agent::Char
+    url::String
     scheme::String
     username::String
     host::String
@@ -1189,6 +1190,7 @@ function reset!(p::CredentialPayload)
     p.credential = Nullable{AbstractCredentials}()
     p.first_pass = true
     p.use_ssh_agent = 'Y'
+    p.url = ""
     p.scheme = ""
     p.username = ""
     p.host = ""
@@ -1202,8 +1204,7 @@ function approve(p::CredentialPayload)
     cred = unsafe_get(p.credential)
 
     if !isnull(p.cache)
-        url = git_url(scheme=p.scheme, host=p.host, username=p.username, path=p.path)
-        approve(unsafe_get(p.cache), cred, url)
+        approve(unsafe_get(p.cache), cred, p.url)
     end
 end
 
@@ -1212,7 +1213,6 @@ function reject(p::CredentialPayload)
     cred = unsafe_get(p.credential)
 
     if !isnull(p.cache)
-        url = git_url(scheme=p.scheme, host=p.host, username=p.username, path=p.path)
-        reject(unsafe_get(p.cache), cred, url)
+        reject(unsafe_get(p.cache), cred, p.url)
     end
 end
