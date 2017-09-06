@@ -458,10 +458,10 @@ end
 end
 
 # broadcast should only "peel off" one container layer
-@test get.([Nullable(1), Nullable(2)]) == [1, 2]
+@test unwrap.([Some(1), Some(2)]) == [1, 2]
 let io = IOBuffer()
-    broadcast(x -> print(io, x), [Nullable(1.0)])
-    @test String(take!(io)) == "Nullable{Float64}(1.0)"
+    broadcast(x -> print(io, x), [Some(1.0)])
+    @test String(take!(io)) == "Some(1.0)"
 end
 
 # Test that broadcast's promotion mechanism handles closures accepting more than one argument.
@@ -516,8 +516,8 @@ end
         [Set([1]), Set([2])] .∪ Set([3]),
         [Set([1, 3]), Set([2, 3])])
 
-    @test isequal(@inferred(broadcast(foo, "world", Nullable(1))),
-                  Nullable("hello"))
+    @test isequal(@inferred(broadcast(foo, "world", Some(1))),
+                  Some("hello"))
 end
 
 # Issue #21291

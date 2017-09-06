@@ -61,11 +61,11 @@ function GitRemoteAnon(repo::GitRepo, url::AbstractString)
 end
 
 """
-    lookup_remote(repo::GitRepo, remote_name::AbstractString) -> Nullable{GitRemote}
+    lookup_remote(repo::GitRepo, remote_name::AbstractString) -> Option{GitRemote}
 
-Determine if the `remote_name` specified exists within the `repo`. Returns a
-[`Nullable`](@ref), which will be null if the requested remote does not exist. If the remote
-does exist, the `Nullable` contains a [`GitRemote`](@ref) to the remote name.
+Determine if the `remote_name` specified exists within the `repo`. Returns an
+[`Option`](@ref), which will be null if the requested remote does not exist. If the remote
+does exist, the `Option` contains a [`GitRemote`](@ref) to the remote name.
 
 # Examples
 ```julia
@@ -80,9 +80,9 @@ function lookup_remote(repo::GitRepo, remote_name::AbstractString)
                 (Ptr{Ptr{Void}}, Ptr{Void}, Cstring),
                 rmt_ptr_ptr, repo.ptr, remote_name)
     if err == Int(Error.GIT_OK)
-        return Nullable{GitRemote}(GitRemote(repo, rmt_ptr_ptr[]))
+        return Some(GitRemote(repo, rmt_ptr_ptr[]))
     elseif err == Int(Error.ENOTFOUND)
-        return Nullable{GitRemote}()
+        return null
     else
         throw(Error.GitError(err))
     end

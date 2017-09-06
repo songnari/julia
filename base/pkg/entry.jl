@@ -318,17 +318,17 @@ function pin(pkg::AbstractString, head::AbstractString)
                     info("Package $pkg: checking out existing branch $branch")
                 else
                     info("Creating $pkg branch $branch")
-                    ref = Nullable(LibGit2.create_branch(repo, branch, commit))
+                    ref = Some(LibGit2.create_branch(repo, branch, commit))
                 end
 
                 # checkout selected branch
-                with(LibGit2.peel(LibGit2.GitTree, get(ref))) do btree
+                with(LibGit2.peel(LibGit2.GitTree, unwrap(ref))) do btree
                     LibGit2.checkout_tree(repo, btree)
                 end
                 # switch head to the branch
-                LibGit2.head!(repo, get(ref))
+                LibGit2.head!(repo, unwrap(ref))
             finally
-                close(get(ref))
+                close(unwrap(ref))
             end
         finally
             close(commit)
@@ -425,7 +425,7 @@ function update(branch::AbstractString, upkgs::Set{String})
                         prev_sha = string(LibGit2.head_oid(repo))
                         success = true
                         try
-                            LibGit2.fetch(repo, payload = Nullable(creds))
+                            LibGit2.fetch(repo, payload = Some(creds))
                             LibGit2.reset!(creds)
                             LibGit2.merge!(repo, fastforward=true)
                         catch err

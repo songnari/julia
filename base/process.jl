@@ -391,7 +391,7 @@ function _uv_hook_close(proc::Process)
     notify(proc.closenotify)
 end
 
-function spawn(redirect::CmdRedirect, stdios::StdIOSet; chain::Nullable{ProcessChain}=Nullable{ProcessChain}())
+function spawn(redirect::CmdRedirect, stdios::StdIOSet; chain::Option{ProcessChain}=null)
     spawn(redirect.cmd,
           (redirect.stream_no == STDIN_NO  ? redirect.handle : stdios[1],
            redirect.stream_no == STDOUT_NO ? redirect.handle : stdios[2],
@@ -399,12 +399,12 @@ function spawn(redirect::CmdRedirect, stdios::StdIOSet; chain::Nullable{ProcessC
            chain=chain)
 end
 
-function spawn(cmds::OrCmds, stdios::StdIOSet; chain::Nullable{ProcessChain}=Nullable{ProcessChain}())
+function spawn(cmds::OrCmds, stdios::StdIOSet; chain::Option{ProcessChain}=null)
     out_pipe = Libc.malloc(_sizeof_uv_named_pipe)
     in_pipe = Libc.malloc(_sizeof_uv_named_pipe)
     link_pipe(in_pipe, false, out_pipe, false)
     if isnull(chain)
-        chain = Nullable(ProcessChain(stdios))
+        chain = Some(ProcessChain(stdios))
     end
     try
         spawn(cmds.a, (stdios[1], out_pipe, stdios[3]), chain=chain)
@@ -415,15 +415,15 @@ function spawn(cmds::OrCmds, stdios::StdIOSet; chain::Nullable{ProcessChain}=Nul
         Libc.free(out_pipe)
         Libc.free(in_pipe)
     end
-    get(chain)
+    unwrap(chain)
 end
 
-function spawn(cmds::ErrOrCmds, stdios::StdIOSet; chain::Nullable{ProcessChain}=Nullable{ProcessChain}())
+function spawn(cmds::ErrOrCmds, stdios::StdIOSet; chain::Option{ProcessChain}=null)
     out_pipe = Libc.malloc(_sizeof_uv_named_pipe)
     in_pipe = Libc.malloc(_sizeof_uv_named_pipe)
     link_pipe(in_pipe, false, out_pipe, false)
     if isnull(chain)
-        chain = Nullable(ProcessChain(stdios))
+        chain = Some(ProcessChain(stdios))
     end
     try
         spawn(cmds.a, (stdios[1], stdios[2], out_pipe), chain=chain)
@@ -434,7 +434,7 @@ function spawn(cmds::ErrOrCmds, stdios::StdIOSet; chain::Nullable{ProcessChain}=
         Libc.free(out_pipe)
         Libc.free(in_pipe)
     end
-    get(chain)
+    unwrap(chain)
 end
 
 function setup_stdio(stdio::PipeEndpoint, readable::Bool)
@@ -505,7 +505,7 @@ function setup_stdio(anon::Function, stdio::StdIOSet)
     close_err && close_stdio(err)
 end
 
-function spawn(cmd::Cmd, stdios::StdIOSet; chain::Nullable{ProcessChain}=Nullable{ProcessChain}())
+function spawn(cmd::Cmd, stdios::StdIOSet; chain::Option{ProcessChain}=null)
     if isempty(cmd.exec)
         throw(ArgumentError("cannot spawn empty command"))
     end
@@ -516,20 +516,20 @@ function spawn(cmd::Cmd, stdios::StdIOSet; chain::Nullable{ProcessChain}=Nullabl
                               in, out, err)
     end
     if !isnull(chain)
-        push!(get(chain).processes, pp)
+        push!(unwrap(chain).processes, pp)
     end
     pp
 end
 
-function spawn(cmds::AndCmds, stdios::StdIOSet; chain::Nullable{ProcessChain}=Nullable{ProcessChain}())
+function spawn(cmds::AndCmds, stdios::StdIOSet; chain::Option{ProcessChain}=null)
     if isnull(chain)
-        chain = Nullable(ProcessChain(stdios))
+        chain = Some(ProcessChain(stdios))
     end
     setup_stdio(stdios) do in, out, err
         spawn(cmds.a, (in,out,err), chain=chain)
         spawn(cmds.b, (in,out,err), chain=chain)
     end
-    get(chain)
+    unwrap(chain)
 end
 
 # INTERNAL
@@ -555,7 +555,7 @@ spawn_opts_inherit(in::Redirectable=RawFD(0), out::Redirectable=RawFD(1), err::R
 
 Run a command object asynchronously, returning the resulting `Process` object.
 """
-spawn(cmds::AbstractCmd, args...; chain::Nullable{ProcessChain}=Nullable{ProcessChain}()) =
+spawn(cmds::AbstractCmd, args...; chain::Option{ProcessChain}=null) =
     spawn(cmds, spawn_opts_swallow(args...)...; chain=chain)
 
 function eachline(cmd::AbstractCmd; chomp::Bool=true)

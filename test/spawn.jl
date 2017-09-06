@@ -438,7 +438,7 @@ if Sys.isunix()
     let ps = Pipe[]
         ulimit_n = tryparse(Int, readchomp(`sh -c 'ulimit -n'`))
         try
-            for i = 1 : 100 * get(ulimit_n, 1000)
+            for i = 1 : 100 * unwrap(ulimit_n, 1000)
                 p = Pipe()
                 Base.link_pipe(p)
                 push!(ps, p)

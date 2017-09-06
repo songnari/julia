@@ -79,9 +79,10 @@ export
     Irrational,
     Matrix,
     MergeSort,
+    Null,
     NTuple,
-    Nullable,
     ObjectIdDict,
+    Option,
     OrdinalRange,
     Pair,
     PartialQuickSort,
@@ -108,6 +109,7 @@ export
     SharedArray,
     SharedMatrix,
     SharedVector,
+    Some,
     StepRange,
     StepRangeLen,
     StridedArray,
@@ -1189,9 +1191,10 @@ export
     unsafe_store!,
     unsafe_write,
 
-# nullable types
+# Null and Some types
     isnull,
-    unsafe_get,
+    null,
+    unwrap,
 
 # Macros
     # parser internal

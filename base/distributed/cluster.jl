@@ -4,47 +4,47 @@ abstract type ClusterManager end
 
 mutable struct WorkerConfig
     # Common fields relevant to all cluster managers
-    io::Nullable{IO}
-    host::Nullable{AbstractString}
-    port::Nullable{Integer}
+    io::Option{IO}
+    host::Option{AbstractString}
+    port::Option{Integer}
 
     # Used when launching additional workers at a host
-    count::Nullable{Union{Int, Symbol}}
-    exename::Nullable{Union{AbstractString, Cmd}}
-    exeflags::Nullable{Cmd}
+    count::Option{Union{Int, Symbol}}
+    exename::Option{Union{AbstractString, Cmd}}
+    exeflags::Option{Cmd}
 
     # External cluster managers can use this to store information at a per-worker level
     # Can be a dict if multiple fields need to be stored.
-    userdata::Nullable{Any}
+    userdata::Option{Any}
 
     # SSHManager / SSH tunnel connections to workers
-    tunnel::Nullable{Bool}
-    bind_addr::Nullable{AbstractString}
-    sshflags::Nullable{Cmd}
-    max_parallel::Nullable{Integer}
+    tunnel::Option{Bool}
+    bind_addr::Option{AbstractString}
+    sshflags::Option{Cmd}
+    max_parallel::Option{Integer}
 
     # Used by Local/SSH managers
-    connect_at::Nullable{Any}
+    connect_at::Option{Any}
 
-    process::Nullable{Process}
-    ospid::Nullable{Integer}
+    process::Option{Process}
+    ospid::Option{Integer}
 
     # Private dictionary used to store temporary information by Local/SSH managers.
-    environ::Nullable{Dict}
+    environ::Option{Dict}
 
     # Connections to be setup depending on the network topology requested
-    ident::Nullable{Any}      # Worker as identified by the Cluster Manager.
+    ident::Option{Any}      # Worker as identified by the Cluster Manager.
     # List of other worker idents this worker must connect with. Used with topology T_CUSTOM.
-    connect_idents::Nullable{Array}
+    connect_idents::Option{Array}
 
     # Run multithreaded blas on worker
-    enable_threaded_blas::Nullable{Bool}
+    enable_threaded_blas::Option{Bool}
 
     function WorkerConfig()
         wc = new()
         for n in 1:length(WorkerConfig.types)
             T = eltype(fieldtype(WorkerConfig, n))
-            setfield!(wc, n, Nullable{T}())
+            setfield!(wc, n, null)
         end
         wc
     end
@@ -59,7 +59,7 @@ mutable struct Worker
     state::WorkerState
     c_state::Condition      # wait for state changes
     ct_time::Float64        # creation time
-    conn_func::Nullable{Function}     # Used to setup connections lazily
+    conn_func::Option{Function}      # Used to setup connections lazily
 
     r_stream::IO
     w_stream::IO
@@ -67,10 +67,11 @@ mutable struct Worker
                                      # serializer as part of the Worker object
     manager::ClusterManager
     config::WorkerConfig
-    version::Nullable{VersionNumber}  # Julia version of the remote process
+    version::Option{VersionNumber}   # Julia version of the remote process
 
     function Worker(id::Int, r_stream::IO, w_stream::IO, manager::ClusterManager;
-                             version=Nullable{VersionNumber}(), config=WorkerConfig())
+                             version::Option{VersionNumber}=null,
+                             config::WorkerConfig=WorkerConfig())
         w = Worker(id)
         w.r_stream = r_stream
         w.w_stream = buffer_writes(w_stream)
@@ -83,7 +84,7 @@ mutable struct Worker
         w
     end
 
-    Worker(id::Int) = Worker(id, Nullable{Function}())
+    Worker(id::Int) = Worker(id, null)
     function Worker(id::Int, conn_func)
         @assert id > 0
         if haskey(map_pid_wrkr, id)
@@ -132,11 +133,11 @@ function exec_conn_func(w::Worker)
     end
 
     try
-        f = get(w.conn_func)
-        w.conn_func = Nullable{Function}()
+        f = unwrap(w.conn_func)
+        w.conn_func = null
         f()
     catch e
-        w.conn_func = () -> throw(e)
+        w.conn_func = Some(() -> throw(e))
         rethrow(e)
     end
     nothing
@@ -192,14 +193,14 @@ line option) and schedules tasks to process incoming TCP connections and request
 
 It does not return.
 """
-start_worker(out::IO=STDOUT) = start_worker(out, Nullable{AbstractString}())
-start_worker(cookie::AbstractString) = start_worker(STDOUT, Nullable{AbstractString}(cookie))
-start_worker(out::IO, cookie::AbstractString) = start_worker(out, Nullable{AbstractString}(cookie))
-function start_worker(out::IO, cookie_in::Nullable{AbstractString})
+start_worker(out::IO=STDOUT) = start_worker(out, null)
+start_worker(cookie::AbstractString) = start_worker(STDOUT, Some(cookie))
+start_worker(out::IO, cookie::AbstractString) = start_worker(out, Some(cookie))
+function start_worker(out::IO, cookie_in::Option{<:AbstractString})
     if isnull(cookie_in)
         cookie = readline(STDIN)
     else
-        cookie = get(cookie_in)
+        cookie = unwrap(cookie_in)
     end
     close(STDIN) # workers will not use it
     redirect_stderr(STDOUT)
@@ -382,7 +383,7 @@ function addprocs_locked(manager::ClusterManager; kwargs...)
     end
 
     if isnull(PGRP.lazy) || nprocs() == 1
-        PGRP.lazy = Nullable{Bool}(params[:lazy])
+        PGRP.lazy = Some(params[:lazy])
     elseif isclusterlazy() != params[:lazy]
         throw(ArgumentError(string("Active workers with lazy=", isclusterlazy(),
                                     ". Cannot set lazy=", params[:lazy])))
@@ -455,9 +456,9 @@ function setup_launched_worker(manager, wconfig, launched_q)
     # When starting workers on remote multi-core hosts, `launch` can (optionally) start only one
     # process on the remote machine, with a request to start additional workers of the
     # same type. This is done by setting an appropriate value to `WorkerConfig.cnt`.
-    cnt = get(wconfig.count, 1)
+    cnt = unwrap(wconfig.count, 1)
     if cnt === :auto
-        cnt = get(wconfig.environ)[:cpu_cores]
+        cnt = unwrap(wconfig.environ)[:cpu_cores]
     end
     cnt = cnt - 1   # Removing self from the requested number
 
@@ -469,8 +470,8 @@ end
 
 function launch_n_additional_processes(manager, frompid, fromconfig, cnt, launched_q)
     @sync begin
-        exename = get(fromconfig.exename)
-        exeflags = get(fromconfig.exeflags, ``)
+        exename = unwrap(fromconfig.exename)
+        exeflags = unwrap(fromconfig.exeflags, ``)
         cmd = `$exename $exeflags`
 
         new_addresses = remotecall_fetch(launch_additional, frompid, cnt, cmd)
@@ -481,8 +482,8 @@ function launch_n_additional_processes(manager, frompid, fromconfig, cnt, launch
             for x in [:host, :tunnel, :sshflags, :exeflags, :exename, :enable_threaded_blas]
                 setfield!(wconfig, x, getfield(fromconfig, x))
             end
-            wconfig.bind_addr = bind_addr
-            wconfig.port = port
+            wconfig.bind_addr = Some(bind_addr)
+            wconfig.port = Some(port)
 
             let wconfig=wconfig
                 @async begin
@@ -550,10 +551,10 @@ function create_worker(manager, wconfig)
 
     elseif PGRP.topology == :custom
         # wait for requested workers to be up before connecting to them.
-        filterfunc(x) = (x.id != 1) && isdefined(x, :config) && (get(x.config.ident) in get(wconfig.connect_idents, []))
+        filterfunc(x) = (x.id != 1) && isdefined(x, :config) && (unwrap(x.config.ident) in unwrap(wconfig.connect_idents, []))
 
         wlist = filter(filterfunc, PGRP.workers)
-        while length(wlist) < length(get(wconfig.connect_idents, []))
+        while length(wlist) < length(unwrap(wconfig.connect_idents, []))
             sleep(1.0)
             wlist = filter(filterfunc, PGRP.workers)
         end
@@ -564,9 +565,9 @@ function create_worker(manager, wconfig)
         end
     end
 
-    all_locs = map(x -> isa(x, Worker) ? (get(x.config.connect_at, ()), x.id) : ((), x.id, true), join_list)
+    all_locs = map(x -> isa(x, Worker) ? (unwrap(x.config.connect_at, ()), x.id) : ((), x.id, true), join_list)
     send_connection_hdr(w, true)
-    join_message = JoinPGRPMsg(w.id, all_locs, PGRP.topology, get(wconfig.enable_threaded_blas, false), isclusterlazy())
+    join_message = JoinPGRPMsg(w.id, all_locs, PGRP.topology, unwrap(wconfig.enable_threaded_blas, false), isclusterlazy())
     send_msg_now(w, MsgHeader(RRID(0,0), ntfy_oid), join_message)
 
     @schedule manage(w.manager, w.id, w.config, :register)
@@ -668,9 +669,9 @@ mutable struct ProcessGroup
     workers::Array{Any,1}
     refs::Dict                  # global references
     topology::Symbol
-    lazy::Nullable{Bool}
+    lazy::Option{Bool}
 
-    ProcessGroup(w::Array{Any,1}) = new("pg-default", w, Dict(), :all_to_all, Nullable{Bool}())
+    ProcessGroup(w::Array{Any,1}) = new("pg-default", w, Dict(), :all_to_all, null)
 end
 const PGRP = ProcessGroup([])
 
@@ -684,13 +685,7 @@ function topology(t)
     t
 end
 
-function isclusterlazy()
-    if isnull(PGRP.lazy)
-        return false
-    else
-        return get(PGRP.lazy)
-    end
-end
+isclusterlazy() = unwrap(PGRP.lazy, false)
 
 get_bind_addr(pid::Integer) = get_bind_addr(worker_from_id(pid))
 get_bind_addr(w::LocalProcess) = LPROC.bind_addr
@@ -700,7 +695,7 @@ function get_bind_addr(w::Worker)
             w.config.bind_addr = remotecall_fetch(get_bind_addr, w.id, w.id)
         end
     end
-    get(w.config.bind_addr)
+    unwrap(w.config.bind_addr)
 end
 
 # globals
@@ -1051,8 +1046,8 @@ function check_same_host(pids)
         if all(p -> (p==1) || (isa(map_pid_wrkr[p].manager, LocalManager)), pids)
             return true
         else
-            first_bind_addr = get(map_pid_wrkr[pids[1]].config.bind_addr)
-            return all(p -> (p != 1) && (get(map_pid_wrkr[p].config.bind_addr) == first_bind_addr), pids[2:end])
+            first_bind_addr = unwrap(map_pid_wrkr[pids[1]].config.bind_addr)
+            return all(p -> (p != 1) && (unwrap(map_pid_wrkr[p].config.bind_addr) == first_bind_addr), pids[2:end])
         end
     end
 end

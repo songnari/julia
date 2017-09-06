@@ -340,10 +340,10 @@ end
 
 # corner case: undefined inside immutable struct
 create_serialization_stream() do s
-    serialize(s, Nullable{Any}())
+    serialize(s, null)
     seekstart(s)
     n = deserialize(s)
-    @test isa(n, Nullable)
+    @test isa(n, Option)
     @test !isdefined(n, :value)
 end
 

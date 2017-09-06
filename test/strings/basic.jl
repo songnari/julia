@@ -225,7 +225,7 @@ gstr = GenericString("12")
 for T in [Int8, UInt8, Int16, UInt16, Int32, UInt32, Int64, UInt64, Int128, UInt128]
     for i in [typemax(T), typemin(T)]
         s = "$i"
-        @test get(tryparse(T, s)) == i
+        @test unwrap(tryparse(T, s)) == i
     end
 end
 
@@ -248,12 +248,12 @@ sp = pointer(s)
 @test unsafe_string(sp,5) == "abcde"
 @test typeof(unsafe_string(sp)) == String
 
-@test get(tryparse(BigInt, "1234567890")) == BigInt(1234567890)
+@test unwrap(tryparse(BigInt, "1234567890")) == BigInt(1234567890)
 @test isnull(tryparse(BigInt, "1234567890-"))
 
-@test get(tryparse(Float64, "64")) == 64.0
+@test unwrap(tryparse(Float64, "64")) == 64.0
 @test isnull(tryparse(Float64, "64o"))
-@test get(tryparse(Float32, "32")) == 32.0f0
+@test unwrap(tryparse(Float32, "32")) == 32.0f0
 @test isnull(tryparse(Float32, "32o"))
 
 # issue #10994: handle embedded NUL chars for string parsing

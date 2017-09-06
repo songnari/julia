@@ -11,11 +11,11 @@ Each `lock` must be matched with an `unlock`.
 This lock is NOT threadsafe. See `Threads.Mutex` for a threadsafe lock.
 """
 mutable struct ReentrantLock
-    locked_by::Nullable{Task}
+    locked_by::Option{Task}
     cond_wait::Condition
     reentrancy_cnt::Int
 
-    ReentrantLock() = new(nothing, Condition(), 0)
+    ReentrantLock() = new(null, Condition(), 0)
 end
 
 """
@@ -41,10 +41,10 @@ Each successful `trylock` must be matched by an `unlock`.
 function trylock(rl::ReentrantLock)
     t = current_task()
     if rl.reentrancy_cnt == 0
-        rl.locked_by = t
+        rl.locked_by = Some(t)
         rl.reentrancy_cnt = 1
         return true
-    elseif t == get(rl.locked_by)
+    elseif t == unwrap(rl.locked_by)
         rl.reentrancy_cnt += 1
         return true
     end
@@ -64,10 +64,10 @@ function lock(rl::ReentrantLock)
     t = current_task()
     while true
         if rl.reentrancy_cnt == 0
-            rl.locked_by = t
+            rl.locked_by = Some(t)
             rl.reentrancy_cnt = 1
             return
-        elseif t == get(rl.locked_by)
+        elseif t == unwrap(rl.locked_by)
             rl.reentrancy_cnt += 1
             return
         end
@@ -89,7 +89,7 @@ function unlock(rl::ReentrantLock)
     end
     rl.reentrancy_cnt -= 1
     if rl.reentrancy_cnt == 0
-        rl.locked_by = nothing
+        rl.locked_by = null
         notify(rl.cond_wait)
     end
     return

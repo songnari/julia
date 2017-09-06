@@ -16,10 +16,11 @@ mutable struct Future <: AbstractRemoteRef
     where::Int
     whence::Int
     id::Int
-    v::Nullable{Any}
+    v::Option{Any}
 
-    Future(w::Int, rrid::RRID) = Future(w, rrid, Nullable{Any}())
-    Future(w::Int, rrid::RRID, v) = (r = new(w,rrid.whence,rrid.id,v); return test_existing_ref(r))
+    Future(w::Int, rrid::RRID) = Future(w, rrid, null)
+    Future(w::Int, rrid::RRID, v::Option{Any}) =
+        (r = new(w,rrid.whence,rrid.id,v); return test_existing_ref(r))
 
     Future(t::Tuple) = new(t[1],t[2],t[3],t[4])  # Useful for creating dummy, zeroed-out instances
 end
@@ -65,7 +66,7 @@ function finalize_ref(r::AbstractRemoteRef)
         else
             # send_del_client only if the reference has not been set
             isnull(r.v) && send_del_client(r)
-            r.v = Nullable{Any}()
+            r.v = null
         end
         r.where = 0
     end
@@ -313,7 +314,7 @@ end
 # Future and RemoteChannel are serializable only in a running cluster.
 # Serialize zeroed-out values to non ClusterSerializer objects
 function serialize(s::AbstractSerializer, ::Future)
-    zero_fut = Future((0,0,0,Nullable{Any}()))
+    zero_fut = Future((0,0,0,null))
     invoke(serialize, Tuple{AbstractSerializer, Any}, s, zero_fut)
 end
 
@@ -474,9 +475,9 @@ wait(r::Future) = (!isnull(r.v) && return r; call_on_owner(wait_ref, r, myid());
 wait(r::RemoteChannel, args...) = (call_on_owner(wait_ref, r, myid(), args...); r)
 
 function fetch(r::Future)
-    !isnull(r.v) && return get(r.v)
-    v=call_on_owner(fetch_ref, r)
-    r.v=v
+    !isnull(r.v) && return unwrap(r.v)
+    v = call_on_owner(fetch_ref, r)
+    r.v = Some(v)
     send_del_client(r)
     v
 end
@@ -513,7 +514,7 @@ value to the return value of the call upon completion.
 function put!(rr::Future, v)
     !isnull(rr.v) && error("Future can be set only once")
     call_on_owner(put_future, rr, v, myid())
-    rr.v = v
+    rr.v = Some(v)
     rr
 end
 function put_future(rid, v, callee)

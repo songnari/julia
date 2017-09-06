@@ -847,8 +847,8 @@ abstract type GitObject <: AbstractGitObject end
 
 for (typ, owntyp, sup, cname) in [
     (:GitRepo,           nothing,               :AbstractGitObject, :git_repository),
-    (:GitConfig,         :(Nullable{GitRepo}),  :AbstractGitObject, :git_config),
-    (:GitIndex,          :(Nullable{GitRepo}),  :AbstractGitObject, :git_index),
+    (:GitConfig,         :(Option{GitRepo}),    :AbstractGitObject, :git_config),
+    (:GitIndex,          :(Option{GitRepo}),    :AbstractGitObject, :git_index),
     (:GitRemote,         :GitRepo,              :AbstractGitObject, :git_remote),
     (:GitRevWalker,      :GitRepo,              :AbstractGitObject, :git_revwalk),
     (:GitReference,      :GitRepo,              :AbstractGitObject, :git_reference),
@@ -898,11 +898,11 @@ for (typ, owntyp, sup, cname) in [
                 return obj
             end
         end
-        if isa(owntyp, Expr) && owntyp.args[1] == :Nullable
+        if isa(owntyp, Expr) && owntyp.args[1] == :Option
             @eval begin
-                $typ(ptr::Ptr{Void}, fin::Bool=true) = $typ($owntyp(), ptr, fin)
+                $typ(ptr::Ptr{Void}, fin::Bool=true) = $typ(null, ptr, fin)
                 $typ(owner::$(owntyp.args[2]), ptr::Ptr{Void}, fin::Bool=true) =
-                    $typ($owntyp(owner), ptr, fin)
+                    $typ(Some(owner), ptr, fin)
             end
         end
     end
@@ -1159,26 +1159,18 @@ Retains state between multiple calls to the credential callback. A single
 instances will be used when the URL has changed.
 """
 mutable struct CredentialPayload <: Payload
-    credential::Nullable{AbstractCredentials}
-    cache::Nullable{CachedCredentials}
+    credential::Option{AbstractCredentials}
+    cache::Option{CachedCredentials}
     scheme::String
     username::String
     host::String
     path::String
 
-    function CredentialPayload(credential::Nullable{<:AbstractCredentials}, cache::Nullable{CachedCredentials})
+    function CredentialPayload(credential::Option{<:AbstractCredentials}, cache::Option{CachedCredentials})
         new(credential, cache, "", "", "", "")
     end
 end
 
-function CredentialPayload(credential::Nullable{<:AbstractCredentials})
-    CredentialPayload(credential, Nullable{CachedCredentials}())
-end
-
-function CredentialPayload(cache::Nullable{CachedCredentials})
-    CredentialPayload(Nullable{AbstractCredentials}(), cache)
-end
-
-function CredentialPayload()
-    CredentialPayload(Nullable{AbstractCredentials}(), Nullable{CachedCredentials}())
-end
+CredentialPayload(credential::Option{<:AbstractCredentials}) = CredentialPayload(credential, null)
+CredentialPayload(cache::Option{CachedCredentials}) = CredentialPayload(null, cache)
+CredentialPayload() = CredentialPayload(null, null)

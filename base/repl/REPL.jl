@@ -926,7 +926,7 @@ function setup_interface(
             str = String(take!(LineEdit.buffer(s)))
             n = tryparse(Int, str)
             isnull(n) && @goto writeback
-            n = get(n)
+            n = unwrap(n)
             if n <= 0 || n > length(linfos) || startswith(linfos[n][1], "./REPL")
                 @goto writeback
             end

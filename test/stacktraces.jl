@@ -105,12 +105,12 @@ let src = expand(Main, quote let x = 1 end end).args[1]::CodeInfo,
     li.inferred = src
     li.specTypes = Tuple{}
     li.def = @__MODULE__
-    sf = StackFrame(:a, :b, 3, li, false, false, 0)
+    sf = StackFrame(:a, :b, 3, Some(li), false, false, 0)
     repr = string(sf)
     @test repr == "Toplevel MethodInstance thunk at b:3"
 end
 let li = typeof(getfield).name.mt.cache.func::Core.MethodInstance,
-    sf = StackFrame(:a, :b, 3, li, false, false, 0),
+    sf = StackFrame(:a, :b, 3, Some(li), false, false, 0),
     repr = string(sf)
     @test repr == "getfield(...) at b:3"
 end

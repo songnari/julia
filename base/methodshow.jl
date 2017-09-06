@@ -94,7 +94,7 @@ function show_method_params(io::IO, tv)
     end
 end
 
-function show(io::IO, m::Method; kwtype::Nullable{DataType}=Nullable{DataType}())
+function show(io::IO, m::Method; kwtype::Option{DataType}=null)
     tv, decls, file, line = arg_decl_parts(m)
     sig = unwrap_unionall(m.sig)
     ft0 = sig.parameters[1]
@@ -122,7 +122,7 @@ function show(io::IO, m::Method; kwtype::Nullable{DataType}=Nullable{DataType}()
     join(io, [isempty(d[2]) ? d[1] : d[1]*"::"*d[2] for d in decls[2:end]],
                  ", ", ", ")
     if !isnull(kwtype)
-        kwargs = kwarg_decl(m, get(kwtype))
+        kwargs = kwarg_decl(m, unwrap(kwtype))
         if !isempty(kwargs)
             print(io, "; ")
             join(io, kwargs, ", ", ", ")
@@ -149,7 +149,7 @@ function show_method_table(io::IO, ms::MethodList, max::Int=-1, header::Bool=tru
         what = startswith(ns, '@') ? "macro" : "generic function"
         print(io, "# $n $m for ", what, " \"", ns, "\":")
     end
-    kwtype = isdefined(mt, :kwsorter) ? Nullable{DataType}(typeof(mt.kwsorter)) : Nullable{DataType}()
+    kwtype = isdefined(mt, :kwsorter) ? Some(typeof(mt.kwsorter)) : null
     n = rest = 0
     local last
 
@@ -225,7 +225,7 @@ function url(m::Method)
     end
 end
 
-function show(io::IO, ::MIME"text/html", m::Method; kwtype::Nullable{DataType}=Nullable{DataType}())
+function show(io::IO, ::MIME"text/html", m::Method; kwtype::Option{DataType}=null)
     tv, decls, file, line = arg_decl_parts(m)
     sig = unwrap_unionall(m.sig)
     ft0 = sig.parameters[1]
@@ -254,7 +254,7 @@ function show(io::IO, ::MIME"text/html", m::Method; kwtype::Nullable{DataType}=N
     join(io, [isempty(d[2]) ? d[1] : d[1]*"::<b>"*d[2]*"</b>"
                       for d in decls[2:end]], ", ", ", ")
     if !isnull(kwtype)
-        kwargs = kwarg_decl(m, get(kwtype))
+        kwargs = kwarg_decl(m, unwrap(kwtype))
         if !isempty(kwargs)
             print(io, "; <i>")
             join(io, kwargs, ", ", ", ")
@@ -281,7 +281,7 @@ function show(io::IO, mime::MIME"text/html", ms::MethodList)
     ns = string(name)
     what = startswith(ns, '@') ? "macro" : "generic function"
     print(io, "$n $meths for ", what, " <b>$ns</b>:<ul>")
-    kwtype = isdefined(mt, :kwsorter) ? Nullable{DataType}(typeof(mt.kwsorter)) : Nullable{DataType}()
+    kwtype = isdefined(mt, :kwsorter) ? Some(typeof(mt.kwsorter)) : null
     for meth in ms
         print(io, "<li> ")
         show(io, mime, meth; kwtype=kwtype)

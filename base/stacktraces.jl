@@ -17,7 +17,7 @@ Stack information representing execution context, with the following fields:
 
   The name of the function containing the execution context.
 
-- `linfo::Nullable{Core.MethodInstance}`
+- `linfo::Option{Core.MethodInstance}`
 
   The MethodInstance containing the execution context (if it could be found).
 
@@ -50,7 +50,7 @@ struct StackFrame # this type should be kept platform-agnostic so that profiles 
     "the line number in the file containing the execution context"
     line::Int
     "the MethodInstance containing the execution context (if it could be found)"
-    linfo::Nullable{Core.MethodInstance}
+    linfo::Option{Core.MethodInstance}
     "true if the code is from C"
     from_c::Bool
     "true if the code is from an inlined frame"
@@ -60,7 +60,7 @@ struct StackFrame # this type should be kept platform-agnostic so that profiles 
 end
 
 StackFrame(func, file, line) = StackFrame(Symbol(func), Symbol(file), line,
-                                          Nullable{Core.MethodInstance}(), false, false, 0)
+                                          null, false, false, 0)
 
 """
     StackTrace
@@ -71,7 +71,7 @@ An alias for `Vector{StackFrame}` provided for convenience; returned by calls to
 const StackTrace = Vector{StackFrame}
 
 const empty_sym = Symbol("")
-const UNKNOWN = StackFrame(empty_sym, empty_sym, -1, Nullable{Core.MethodInstance}(), true, false, 0) # === lookup(C_NULL)
+const UNKNOWN = StackFrame(empty_sym, empty_sym, -1, null, true, false, 0) # === lookup(C_NULL)
 
 
 #=
@@ -111,7 +111,7 @@ function deserialize(s::AbstractSerializer, ::Type{StackFrame})
     from_c = read(s.io, Bool)
     inlined = read(s.io, Bool)
     pointer = read(s.io, UInt64)
-    return StackFrame(func, file, line, Nullable{Core.MethodInstance}(), from_c, inlined, pointer)
+    return StackFrame(func, file, line, null, from_c, inlined, pointer)
 end
 
 
@@ -124,12 +124,12 @@ inlined at that point, innermost function first.
 """
 function lookup(pointer::Ptr{Void})
     infos = ccall(:jl_lookup_code_address, Any, (Ptr{Void}, Cint), pointer - 1, false)
-    isempty(infos) && return [StackFrame(empty_sym, empty_sym, -1, Nullable{Core.MethodInstance}(), true, false, convert(UInt64, pointer))]
+    isempty(infos) && return [StackFrame(empty_sym, empty_sym, -1, null, true, false, convert(UInt64, pointer))]
     res = Vector{StackFrame}(length(infos))
     for i in 1:length(infos)
         info = infos[i]
         @assert(length(info) == 7)
-        li = info[4] === nothing ? Nullable{Core.MethodInstance}() : Nullable{Core.MethodInstance}(info[4])
+        li = info[4] === nothing ? null : Some(info[4])
         res[i] = StackFrame(info[1], info[2], info[3], li, info[5], info[6], info[7])
     end
     return res
@@ -213,7 +213,7 @@ function show_spec_linfo(io::IO, frame::StackFrame)
             print_with_color(Base.have_color && get(io, :backtrace, false) ? Base.stackframe_function_color() : :nothing, io, string(frame.func))
         end
     else
-        linfo = get(frame.linfo)
+        linfo = unwrap(frame.linfo)
         if isa(linfo.def, Method)
             Base.show_tuple_as_call(io, linfo.def.name, linfo.specTypes)
         else
@@ -251,7 +251,7 @@ function from(frame::StackFrame, m::Module)
     result = false
 
     if !isnull(finfo)
-        frame_m = get(finfo).def
+        frame_m = unwrap(finfo).def
         isa(frame_m, Method) && (frame_m = frame_m.module)
         result = module_name(frame_m) === module_name(m)
     end

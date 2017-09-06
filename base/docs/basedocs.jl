@@ -707,7 +707,7 @@ Void
     nothing
 
 The singleton instance of type `Void`, used by convention when there is no value to return
-(as in a C `void` function). Can be converted to an empty `Nullable` value.
+(as in a C `void` function).
 """
 nothing
 

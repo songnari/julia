@@ -106,7 +106,7 @@ mutable struct PipeEndpoint <: LibuvStream
     readnotify::Condition
     connectnotify::Condition
     closenotify::Condition
-    sendbuf::Nullable{IOBuffer}
+    sendbuf::Option{IOBuffer}
     lock::ReentrantLock
     throttle::Int
 
@@ -118,7 +118,7 @@ mutable struct PipeEndpoint <: LibuvStream
                 Condition(),
                 Condition(),
                 Condition(),
-                nothing,
+                null,
                 ReentrantLock(),
                 DEFAULT_READ_BUFFER_SZ)
         associate_julia_struct(handle, p)
@@ -156,7 +156,7 @@ mutable struct TTY <: LibuvStream
     buffer::IOBuffer
     readnotify::Condition
     closenotify::Condition
-    sendbuf::Nullable{IOBuffer}
+    sendbuf::Option{IOBuffer}
     lock::ReentrantLock
     throttle::Int
     @static if Sys.iswindows(); ispty::Bool; end
@@ -168,7 +168,8 @@ mutable struct TTY <: LibuvStream
             PipeBuffer(),
             Condition(),
             Condition(),
-            nothing, ReentrantLock(),
+            null,
+            ReentrantLock(),
             DEFAULT_READ_BUFFER_SZ)
         associate_julia_struct(handle, tty)
         finalizer(tty, uvfinalize)
@@ -832,7 +833,7 @@ function unsafe_write(s::LibuvStream, p::Ptr{UInt8}, n::UInt)
         return uv_write(s, p, UInt(n))
     end
 
-    buf = get(s.sendbuf)
+    buf = unwrap(s.sendbuf)
     totb = nb_available(buf) + n
     if totb < buf.maxsize
         nb = unsafe_write(buf, p, n)
@@ -851,7 +852,7 @@ function flush(s::LibuvStream)
     if isnull(s.sendbuf)
         return
     end
-    buf = get(s.sendbuf)
+    buf = unwrap(s.sendbuf)
     if nb_available(buf) > 0
         arr = take!(buf)        # Array of UInt8s
         uv_write(s, arr)
@@ -859,13 +860,13 @@ function flush(s::LibuvStream)
     return
 end
 
-buffer_writes(s::LibuvStream, bufsize) = (s.sendbuf=PipeBuffer(bufsize); s)
+buffer_writes(s::LibuvStream, bufsize) = (s.sendbuf=Some(PipeBuffer(bufsize)); s)
 
 ## low-level calls to libuv ##
 
 function write(s::LibuvStream, b::UInt8)
     if !isnull(s.sendbuf)
-        buf = get(s.sendbuf)
+        buf = unwrap(s.sendbuf)
         if nb_available(buf) + 1 < buf.maxsize
             return write(buf, b)
         end

@@ -96,7 +96,7 @@ function firstcaller(bt::Array{Ptr{Void},1}, funcsyms)
             found = lkup.func in funcsyms
             # look for constructor type name
             if !found && !isnull(lkup.linfo)
-                li = get(lkup.linfo)
+                li = unwrap(lkup.linfo)
                 ft = ccall(:jl_first_argument_datatype, Any, (Any,), li.def.sig)
                 if isa(ft,DataType) && ft.name === Type.body.name
                     ft = unwrap_unionall(ft.parameters[1])
@@ -1755,6 +1755,8 @@ import .Iterators.enumerate
 @deprecate enumerate(i::IndexCartesian, A::AbstractArray)  pairs(i, A)
 
 @deprecate_binding Range AbstractRange
+
+@deprecate_moved Nullable "Nullables"
 
 # END 0.7 deprecations
 
