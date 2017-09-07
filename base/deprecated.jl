@@ -1725,6 +1725,19 @@ function countnz(x)
     return count(t -> t != 0, x)
 end
 
+# issue #14470
+# This definition will gracefully supercede the real definition until deprecations are removed
+@inline function checkbounds_indices(::Type{Bool}, IA::Tuple{Any,Vararg{Any}}, ::Tuple{})
+    if any(x->unsafe_length(x)!=1, IA)
+        _depwarn_for_trailing_indices(IA)
+    end
+    return true
+end
+function _depwarn_for_trailing_indices(t::Tuple)
+    depwarn("omitting indices for non-singleton trailing dimensions is deprecated. Add trailing `1` indices or use `reshape` to make the dimensionality of the array match the number of indices.", (:getindex, :setindex!, :view))
+    true
+end
+
 # issue #22791
 @deprecate select partialsort
 @deprecate select! partialsort!
