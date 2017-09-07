@@ -1699,6 +1699,15 @@ export hex2num
 
 @deprecate convert(dt::Type{<:Integer}, ip::IPAddr)  dt(ip)
 
+function (::Type{T})(arg) where {T}
+    if applicable(convert, T, arg)
+        # if `convert` call would not work, just let the method error happen
+        depwarn("Constructors no longer fall back to `convert`. A constructor `$T(::$(typeof(arg)))` should be defined instead.", :Type)
+    end
+    convert(T, arg)::T
+end
+# related items to remove in: abstractarray.jl, dates/periods.jl
+
 # Issue #19923
 @deprecate ror                  circshift
 @deprecate ror!                 circshift!
