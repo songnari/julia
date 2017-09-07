@@ -1733,6 +1733,10 @@ end
     end
     return true
 end
+function _depwarn_for_trailing_indices(n::Integer) # Called by the C boundscheck
+    depwarn("omitting indices for non-singleton trailing dimensions is deprecated. Add `1`s as trailing indices or use `reshape(A, Val($n))` to make the dimensionality of the array match the number of indices.", (:getindex, :setindex!, :view))
+    true
+end
 function _depwarn_for_trailing_indices(t::Tuple)
     depwarn("omitting indices for non-singleton trailing dimensions is deprecated. Add `$(map(first, t))` as trailing indices or use `reshape` to make the dimensionality of the array match the number of indices.", (:getindex, :setindex!, :view))
     true

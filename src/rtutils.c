@@ -1024,7 +1024,7 @@ JL_DLLEXPORT void jl_depwarn_partial_indexing(size_t n)
 {
     static jl_value_t *depwarn_func = NULL;
     if (!depwarn_func && jl_base_module) {
-        depwarn_func = jl_get_global(jl_base_module, jl_symbol("partial_linear_indexing_warning"));
+        depwarn_func = jl_get_global(jl_base_module, jl_symbol("_depwarn_for_trailing_indices"));
     }
     if (!depwarn_func) {
         jl_safe_printf("WARNING: omitting indices for non-singleton trailing dimensions is deprecated. Use "
