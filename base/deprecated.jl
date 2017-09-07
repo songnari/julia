@@ -1734,7 +1734,7 @@ end
     return true
 end
 function _depwarn_for_trailing_indices(t::Tuple)
-    depwarn("omitting indices for non-singleton trailing dimensions is deprecated. Add trailing `1` indices or use `reshape` to make the dimensionality of the array match the number of indices.", (:getindex, :setindex!, :view))
+    depwarn("omitting indices for non-singleton trailing dimensions is deprecated. Add `$(map(first, t))` as trailing indices or use `reshape` to make the dimensionality of the array match the number of indices.", (:getindex, :setindex!, :view))
     true
 end
 
