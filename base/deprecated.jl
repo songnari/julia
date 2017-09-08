@@ -1728,9 +1728,8 @@ end
 # issue #14470
 # This definition will gracefully supercede the real definition until deprecations are removed
 @inline function checkbounds_indices(::Type{Bool}, IA::Tuple{Any,Vararg{Any}}, ::Tuple{})
-    if any(x->unsafe_length(x)!=1, IA)
-        _depwarn_for_trailing_indices(IA)
-    end
+    any(x->unsafe_length(x)==0, IA) && return false
+    any(x->unsafe_length(x)!=1, IA) && return _depwarn_for_trailing_indices(IA)
     return true
 end
 function _depwarn_for_trailing_indices(n::Integer) # Called by the C boundscheck

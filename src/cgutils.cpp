@@ -1664,7 +1664,7 @@ static Value *emit_array_nd_index(
     if (bc) {
         // We have already emitted a bounds check for each index except for
         // the last one which we therefore have to do here.
-        if (nidxs == 1 && nd > 1) {
+        if (nidxs == 1) {
             // Linear indexing: Check against the entire linear span of the array
             Value *alen = emit_arraylen(ctx, ainfo, ex);
             ctx.builder.CreateCondBr(ctx.builder.CreateICmpULT(i, alen), endBB, failBB);
