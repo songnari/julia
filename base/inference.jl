@@ -2479,7 +2479,7 @@ function abstract_eval(@nospecialize(e), vtypes::VarTable, sv::InferenceState)
             n = sym.args[1]
             if 1 <= n <= length(sv.sp)
                 val = sv.sp[n]
-                if !isa(val, TypeVar)
+                if !has_free_typevars(val)
                     t = Const(true)
                 end
             end
@@ -4388,8 +4388,7 @@ function inlineable(@nospecialize(f), @nospecialize(ft), e::Expr, atypes::Vector
     @assert na == length(argexprs)
 
     for i = 1:length(methsp)
-        si = methsp[i]
-        isa(si, TypeVar) && return NF
+        has_free_typevars(methsp[i]) && return NF
     end
 
     # some gf have special tfunc, meaning they wouldn't have been inferred yet
