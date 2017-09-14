@@ -443,6 +443,10 @@ Deprecated or removed
     this is not true. If you are certain you need the old behavior, it is temporarily available
     as `Base._isleaftype` ([#17086]).
 
+  * Constructors for `LibGit2.UserPasswordCredentials` and `LibGit2.SSHCredentials` no longer take a
+    `prompt_if_incorrect` argument. Controlling prompting behavior has been moved to
+    `LibGit2.CredentialPayload`.
+
 Command-line option changes
 ---------------------------
 
