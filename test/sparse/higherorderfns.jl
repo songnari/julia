@@ -173,6 +173,7 @@ end
             fY = Array(Y)
             # --> test broadcast entry point
             @test broadcast(+, X, Y) == sparse(broadcast(+, fX, fY))
+            @test broadcast(-, X, Y) == sparse(broadcast(-, fX, fY))
             @test broadcast(*, X, Y) == sparse(broadcast(*, fX, fY))
             @test broadcast(f, X, Y) == sparse(broadcast(f, fX, fY))
             # TODO strengthen this test, avoiding dependence on checking whether
@@ -187,6 +188,10 @@ end
             broadcast!(+, Z, X, Y); Z = sparse(fZ) # warmup for @allocated
             @test (@allocated broadcast!(+, Z, X, Y)) == 0
             @test broadcast!(+, Z, X, Y) == sparse(broadcast!(+, fZ, fX, fY))
+            broadcast!(-, fZ, fX, fY); Z = sparse(fZ)
+            broadcast!(-, Z, X, Y); Z = sparse(fZ) # warmup for @allocated
+            @test (@allocated broadcast!(-, Z, X, Y)) == 0
+            @test broadcast!(-, Z, X, Y) == sparse(broadcast!(-, fZ, fX, fY))
             # --> test broadcast! entry point / *-like zero-preserving op
             broadcast!(*, fZ, fX, fY); Z = sparse(fZ)
             broadcast!(*, Z, X, Y); Z = sparse(fZ) # warmup for @allocated
