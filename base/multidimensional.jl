@@ -88,6 +88,12 @@ module IteratorsMD
 
     # indexing
     getindex(index::CartesianIndex, i::Integer) = index.I[i]
+    eltype(index::CartesianIndex) = eltype(index.I)
+
+    # iteration
+    start(index::CartesianIndex) = start(index.I)
+    next(index::CartesianIndex, state) = next(index.I, state)
+    done(index::CartesianIndex, state) = done(index.I, state)
 
     # zeros and ones
     zero(::CartesianIndex{N}) where {N} = zero(CartesianIndex{N})
