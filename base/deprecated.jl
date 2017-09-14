@@ -1806,6 +1806,11 @@ import .Iterators.enumerate
     return p
 end
 
+# ease transition for return type change of e.g. indmax due to PR #22907 when used in the
+# common pattern `ind2sub(size(a), indmax(a))`
+@deprecate(ind2sub(dims::NTuple{N,Integer}, idx::CartesianIndex{N}) where N,
+           ntuple(n -> idx[n], Val{N}()))
+
 # END 0.7 deprecations
 
 # BEGIN 1.0 deprecations
